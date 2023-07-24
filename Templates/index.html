@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stock Portfolio Tracker</title>
+</head>
+<body>
+    <h1>Portfolio</h1>
+    <table>
+        <tr>
+            <th>Symbol</th>
+            <th>Quantity</th>
+            <th>Avg. Price</th>
+            <th>Live Price</th>
+        </tr>
+        {% for stock in portfolio %}
+        <tr>
+            <td>{{ stock[0] }}</td>
+            <td>{{ stock[1] }}</td>
+            <td>${{ stock[2]|round(2) }}</td>
+            <td>${{ stock[3]|default("Not available") }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h1>Watchlist</h1>
+    <table>
+        <tr>
+            <th>Symbol</th>
+            <th>Live Price</th>
+        </tr>
+        {% for stock in watchlist %}
+        <tr>
+            <td>{{ stock[0] }}</td>
+            <td>${{ stock[1]|default("Not available") }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

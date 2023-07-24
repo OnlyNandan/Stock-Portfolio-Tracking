@@ -2,7 +2,9 @@ import yfinance as yf
 import mysql.connector
 from mysql.connector import Error
 import plotly.graph_objects as go
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template
+
+app = Flask(__name__)
 
 def create_connection():
     try:
@@ -43,10 +45,6 @@ def create_tables(connection):
     except Error as e:
         print("Error while creating tables:", e)
 
-if __name__ == '__main__':
-    connection = create_connection()
-    if connection:
-        create_tables(connection)
 
 def add_to_portfolio(connection, symbol, quantity, avg_price):
     try:
@@ -89,33 +87,42 @@ def get_watchlist(connection):
 def get_live_price(symbol):
     try:
         stock = yf.Ticker(symbol)
-        return stock.history(period='1d')['Close'][0]
+        live_price = stock.history(period='1d')['Close'][0]
+        return live_price
     except Exception as e:
         print(f"Error while fetching live price for {symbol}: {e}")
         return None
+live_price=get_live_price("aapl")
+@app.route('/')
+def index():
+    connection = create_connection()
+    if connection:
+        create_tables(connection)
+        portfolio_data = get_portfolio(connection)
+        watchlist_data = get_watchlist(connection)
+
+        updated_portfolio_data = []
+        for stock in portfolio_data:
+            symbol, quantity, avg_price = stock
+            live_price = get_live_price(symbol)
+            if live_price is not None:
+                stock_data = [symbol, quantity, avg_price, live_price]  # Create a new list with live price
+            else:
+                stock_data = [symbol, quantity, avg_price, "Not available"]
+            updated_portfolio_data.append(stock_data)
+
+        updated_watchlist_data = []
+        for stock in watchlist_data:
+            symbol = stock[0]
+            live_price = get_live_price(symbol)
+            if live_price is not None:
+                stock_data = [symbol, live_price]  # Create a new list with live price
+            else:
+                stock_data = [symbol, "Not available"]
+            updated_watchlist_data.append(stock_data)
+
+        return render_template('index.html', portfolio=updated_portfolio_data, watchlist=updated_watchlist_data)
 
 
-def display_portfolio_and_watchlist(connection):
-    portfolio_data = get_portfolio(connection)
-    watchlist_data = get_watchlist(connection)
-
-    print("\nPortfolio:")
-    for stock in portfolio_data:
-        symbol, quantity, avg_price = stock
-        live_price = get_live_price(symbol)
-        if live_price is not None:
-            print(f"{symbol}: {quantity} shares | Avg. Price: ${avg_price:.2f} | Live Price: ${live_price:.2f}")
-        else:
-            print(f"{symbol}: {quantity} shares | Avg. Price: ${avg_price:.2f} | Live Price: Not available")
-
-    print("\nWatchlist:")
-    for stock in watchlist_data:
-        symbol = stock[0]
-        live_price = get_live_price(symbol)
-        if live_price is not None:
-            print(f"{symbol}: Live Price: ${live_price:.2f}")
-        else:
-            print(f"{symbol}: Live Price: Not available")
-
-
-
+if __name__ == '__main__':
+    app.run(debug=True)
