@@ -2,9 +2,13 @@ import yfinance as yf
 import mysql.connector
 from mysql.connector import Error
 import plotly.graph_objects as go
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired
 
 app = Flask(__name__)
+app.secret_key = "S@^a6"
 
 def create_connection():
     try:
@@ -92,9 +96,43 @@ def get_live_price(symbol):
     except Exception as e:
         print(f"Error while fetching live price for {symbol}: {e}")
         return None
-live_price=get_live_price("aapl")
-@app.route('/')
+
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+        if check_user_credentials(username, password):
+            session['username'] = username
+            flash('Login successful!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid username or password', 'danger')
+    return render_template('login.html', form=form)
+
+def check_user_credentials(username, password):
+    try:
+        connection = create_connection()
+        if connection:
+            cursor = connection.cursor()
+            cursor.execute('SELECT * FROM users WHERE username=%s AND password=%s', (username, password))
+            user = cursor.fetchone()
+            cursor.close()
+            if user:
+                return True
+    except Error as e:
+        print("Error while checking user credentials:", e)
+    return False
+    
+@app.route('/index')
 def index():
+    if 'username' not in session:
+        return redirect(url_for('login'))
     connection = create_connection()
     if connection:
         create_tables(connection)
@@ -125,4 +163,4 @@ def index():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=7770)
