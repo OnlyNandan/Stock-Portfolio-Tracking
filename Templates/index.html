@@ -2,38 +2,204 @@
 <html>
 <head>
     <title>Stock Portfolio Tracker</title>
+    <!-- Add Plotly CDN for graph -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+        header {
+            background-color: #262626;
+            color: #fff;
+            text-align: center;
+            padding: 15px;
+            font-size: 32px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            margin: 10px;
+            font-size: 32px;
+        }
+        #container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        #graph-container {
+            flex: 2;
+            height: 550px;
+            background-color: #1a1a1a;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 1s ease-in-out;
+        }
+        #stock-list {
+            flex: 1;
+            padding: 10px;
+            text-align: center; /* Center the content */
+            animation: slideInUp 1s ease-in-out;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            color: #fff;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #262626;
+            color: #fff;
+        }
+        tr {
+            transition: background-color 0.2s ease-in-out;
+        }
+        tr:hover {
+            background-color: #3d3d3d;
+        }
+        .positive-profit {
+            color: #00cc66;
+        }
+        .negative-profit {
+            color: #ff3333;
+        }
+        .rounded-container {
+            border-radius: 10px;
+            padding: 10px;
+            background-color: #262626;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Keyframe animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideInUp {
+            from {
+                transform: translateY(50px);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        /* Sign out button style */
+        .sign-out-button {
+            background-color: #ff3333;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            float: right;
+        }
+
+        .sign-out-button:hover {
+            background-color: #ff6666;
+        }
+    </style>
 </head>
 <body>
-    <h1>Portfolio</h1>
-    <table>
-        <tr>
-            <th>Symbol</th>
-            <th>Quantity</th>
-            <th>Avg. Price</th>
-            <th>Live Price</th>
-        </tr>
-        {% for stock in portfolio %}
-        <tr>
-            <td>{{ stock[0] }}</td>
-            <td>{{ stock[1] }}</td>
-            <td>${{ stock[2]|round(2) }}</td>
-            <td>${{ stock[3]|default("Not available") }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+    <header>
+        <button class="sign-out-button" onclick="window.location.href='/';">Sign Out</button>
+        <h1>Stock Portfolio Tracker</h1>
+    </header>
+    <div id="container">
+        <div id="graph-container">
+            <!-- Add your graph here using Plotly -->
+        </div>
+        <div id="stock-list" class="rounded-container">
+            <h2 style="color: #fff;">My Stocks</h2>
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Quantity</th>
+                    <th>Profit/Loss</th>
+                </tr>
+                {% for stock in portfolio %}
+                <tr>
+                    <td>{{ stock[0] }}</td>
+                    <td>{{ stock[1] }}</td>
+                    <td class="{% if stock[3]|default(0) * stock[1] - stock[1] * stock[2] >= 0 %}positive-profit{% else %}negative-profit{% endif %}">
+                        ${{ (stock[3]|default(0) * stock[1] - stock[1] * stock[2])|round(2) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
 
-    <h1>Watchlist</h1>
-    <table>
-        <tr>
-            <th>Symbol</th>
-            <th>Live Price</th>
-        </tr>
-        {% for stock in watchlist %}
-        <tr>
-            <td>{{ stock[0] }}</td>
-            <td>${{ stock[1]|default("Not available") }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+    <script>
+        // Data for the graph (modify this according to your SQL data)
+        var data = [
+            {
+                x: [{% for stock in portfolio %}'{{ stock[0] }}',{% endfor %}],
+                y: [{% for stock in portfolio %}{{ stock[2]|round(2) }},{% endfor %}],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Avg. Buy Price',
+                line: { color: '#3399ff' }
+            },
+            {
+                x: [{% for stock in portfolio %}'{{ stock[0] }}',{% endfor %}],
+                y: [{% for stock in portfolio %}{{ stock[3]|default("null")|round(2) }},{% endfor %}],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Live Price',
+                line: { color: '#00cc66' }
+            },
+            {
+                x: [{% for stock in portfolio %}'{{ stock[0] }}',{% endfor %}],
+                y: [{% for stock in portfolio %}{{ (stock[1] * stock[2])|round(2) }},{% endfor %}],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Total Value',
+                line: { color: '#ffa64d' }
+            },
+            {
+                x: [{% for stock in portfolio %}'{{ stock[0] }}',{% endfor %}],
+                y: [{% for stock in portfolio %}{{ (stock[1] * stock[3]|default("null"))|round(2) }},{% endfor %}],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Total Live Value',
+                line: { color: '#ff3333' }
+            }
+        ];
+
+        var layout = {
+            title: 'Stock Performance',
+            xaxis: { title: 'Stock Name', showgrid: false, tickfont: { color: '#ffffff' } },
+            yaxis: { title: 'Price', showgrid: false, tickfont: { color: '#ffffff' } },
+            showlegend: true,
+            legend: {
+                x: 1,
+                xanchor: 'right',
+                y: 1,
+                font: { color: '#ffffff' }
+            },
+            plot_bgcolor: '#1a1a1a',
+            paper_bgcolor: '#1a1a1a',
+        };
+
+        // Create the graph using Plotly
+        Plotly.newPlot('graph-container', data, layout);
+    </script>
 </body>
 </html>
