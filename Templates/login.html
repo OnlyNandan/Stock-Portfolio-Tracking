@@ -2,7 +2,7 @@
 	<html lang="en">
 	  <head>
 		<meta charset="UTF-8" />
-		<title>Animation Login Page</title>
+		<title>Stock Login Page</title>
 		<link
 		  rel="stylesheet"
 		  href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css"
@@ -13,10 +13,8 @@
 		/>
 		<link rel="stylesheet" href="{{ url_for('static', filename='stylelogin.css') }}" />
 		<script src="{{ url_for('static', filename='scriptlogin.js') }}" defer></script>
-		<!-- Dog SVG Source: https://www.youtube.com/watch?v=0u-ryYoDqVI -->
 	  </head>
 	  <body>
-		<!-- SVG Image Start  -->
 		<div class="container">
 		  <div class="ear ear--left"></div>
 		  <div class="ear ear--right"></div>
@@ -88,9 +86,7 @@
 			  </div>
 			</div>
 		  </div>
-		  <!-- SVG Image End -->
 
-		  <!-- Form Start -->
 		  <div class="tengah">
 			<div class="login">
 				<form method="post">
@@ -103,7 +99,9 @@
 				  autocomplete="on"
 				  placeholder="Username"
 				  {{ form.username }}
-				/>
+				
+				
+				
 				
 			  </label>
 			  <label>
@@ -114,24 +112,14 @@
 				  autocomplete="off"
 				  placeholder="password"
 				  {{ form.password }}
-				/>
+				
 				<button class="password-button">show</button>
 			  </label>
 			  {{ form.submit(class="login-button", value="            sign in") }}
 			</div>
 		  </div>
 
-		  <!-- Form End -->
 
-		  <!-- Footer Start  -->
-		  <div class="footer">
-			<p>
-			  Don't have account yet?
-			  <a class="footer-a" href="registrasi.html">Sign Up</a>
-			</p>
-		  </div>
-		</div>
-		<!-- Footer End -->
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.5/lodash.min.js"></script>
 	  </body>
 	</html>
