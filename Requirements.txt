@@ -4,3 +4,4 @@ plotly==5.3.1
 Flask==2.0.1
 Flask-WTF==0.15.1
 WTForms==2.3.3
+requests

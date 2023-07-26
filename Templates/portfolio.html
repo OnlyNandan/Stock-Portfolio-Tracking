@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Portfolio</title>
+    <style>
+        /* Add your custom CSS styles here */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+        header {
+            background-color: #262626;
+            color: #fff;
+            text-align: center;
+            padding: 2px;
+            font-size: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        main {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            color: #fff;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #262626;
+            color: #fff;
+        }
+        tr {
+            transition: background-color 0.2s ease-in-out;
+        }
+        tr:hover {
+            background-color: #3d3d3d;
+        }
+        .rounded-container {
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #262626;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0px;
+            margin-left: 25px;
+            margin-right: 25px;
+        }
+        .home-button, .wishlist-button {
+            background-color: #3399ff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .home-button:hover, .wishlist-button:hover {
+            background-color: #1f7bbf;
+        }
+        .transaction-form {
+            width: 100%; 
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center; 
+            margin-top: 20px;
+        }
+        .transaction-form input {
+            margin: 5px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .transaction-form button {
+            background-color: #00cc66;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .transaction-form button:hover {
+            background-color: #00b359;
+        }
+        .error {
+            color: #ff3333;
+            margin: 5px;
+        }
+        .sell-button {
+            background-color: #ff4d4d;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .sell-button:hover {
+            background-color: #ff1a1a;
+        }
+
+        .boxed-layout {
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            width: 100%;
+            max-width: 500px;
+            margin: 20px auto;
+        }
+
+        .small-container {
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            width: 100%;
+            max-width: 300px;
+            margin: 10px;
+        }
+
+        .placeholder-content {
+            color: #ccc;
+        }
+
+        .gain-investment-container {
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #262626;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+			margin-left:20px;
+        }
+
+        .gain-investment-list {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.gain-investment-item {
+			display: flex;
+			justify-content: space-between;
+		}
+
+		.gain-investment-label {
+			font-weight: bold;
+			color: #ccc;
+		}
+
+		.gain-investment-value {
+			color: #fff;
+		}
+		
+		.gain {
+			color: #00cc66; 
+		}
+		.loss {
+			color: #ff4d4d;
+		}
+		.trending-stocks-container {
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #262626;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+            margin-left: 20px;
+            flex: 1; 
+        }
+
+        .trending-stock {
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .trending-stock span {
+            display: block;
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <div class="button-container">
+            <button class="home-button" onclick="window.location.href='/index';">
+                Home Page
+            </button>
+            <h1>My Portfolio</h1>
+            <button class="wishlist-button" onclick="window.location.href='/wishlist';">
+                Wishlist
+            </button>
+        </div>
+    </header>
+    <main>
+        <section id="user-stocks" class="rounded-container">
+            <h2>My Stocks</h2>
+            <table>
+                <tr>
+                    <th>Stock Name</th>
+                    <th>Quantity</th>
+                    <th>Avg. Price</th>
+                    <th>Live Price</th>
+                    <th>Action</th>
+                </tr>
+                {% for stock in portfolio %}
+                <tr>
+                    <td>{{ stock[0] }}</td>
+                    <td>{{ stock[1] }}</td>
+                    <td>${{ stock[2]|round(2) }}</td>
+                    <td>{% if stock[3] != "Not available" %}${{ stock[3]|round(2) }}{% else %}{{ stock[3] }}{% endif %}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('delete_stock') }}">
+                            <input type="hidden" name="symbol" value="{{ stock[0] }}">
+                            <button class="sell-button" type="submit">Sell</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </section>
+
+<div class="gain-investment-container">
+    <h2>Gain & Investment</h2>
+    <div class="gain-investment-list">
+	<div class="gain-investment-item">
+		</div>
+		<div class="gain-investment-item">
+		</div>
+		<div class="gain-investment-item">
+		</div><div class="gain-investment-item">
+		</div>
+        <div class="gain-investment-item">
+            <span class="gain-investment-label">Total Value:</span>
+            <span class="gain-investment-value">${{ total_value_of_stocks|round(2) }}</span>
+        </div>
+		<div class="gain-investment-item">
+		</div>
+        <div class="gain-investment-item">
+            <span class="gain-investment-label"> Investment:  </span>
+            <span class="gain-investment-value">${{ total_investment|round(2) }}</span>
+        </div>
+		<div class="gain-investment-item">
+		</div>
+		
+        <div class="gain-investment-item {% if total_gains >= 0 %}gain{% else %}loss{% endif %}">
+    <span class="gain-investment-label">Total Gains:</span>
+    <span class="gain-investment-value {% if total_gains >= 0 %}gain{% else %}loss{% endif %}">
+        ${{ total_gains|round(2) }}
+    </span>
+</div>
+    </div>
+</div>
+<div class="trending-stocks-container">
+    <h2>Financial News</h2>
+    <ul>
+        {% for news in financial_news[:5] %} 
+        <li>{{ news }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+
+        <div class="transaction-form rounded-container">
+              <h2>&nbsp &nbsp Add Stock to Portfolio</h2>
+			<h2>&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp </h2>
+            <form method="post" action="{{ url_for('add_stock') }}">
+                <input type="text" name="symbol" placeholder="Stock Symbol" required>
+                <input type="number" name="quantity" placeholder="Quantity" required>
+                <input type="number" name="avg_price" step="0.01" placeholder="Avg. Price" required>
+                <button type="submit">Add to Portfolio</button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

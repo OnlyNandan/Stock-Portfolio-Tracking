@@ -2,6 +2,7 @@ import yfinance as yf
 import mysql.connector
 from mysql.connector import Error
 import plotly.graph_objects as go
+import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -101,6 +102,7 @@ class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
+    
 @app.route('/', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -154,12 +156,112 @@ def index():
             symbol = stock[0]
             live_price = get_live_price(symbol)
             if live_price is not None:
-                stock_data = [symbol, live_price]  # Create a new list with live price
+                stock_data = [symbol, live_price]  
             else:
                 stock_data = [symbol, "Not available"]
             updated_watchlist_data.append(stock_data)
 
         return render_template('index.html', portfolio=updated_portfolio_data, watchlist=updated_watchlist_data)
+
+def get_financial_news(api_key):
+    try:
+        url = f'https://newsapi.org/v2/top-headlines?category=business&language=en&apiKey={api_key}'
+        response = requests.get(url)
+        data = response.json()
+        if data['status'] == 'ok':
+            return [article['title'] for article in data['articles']]
+        else:
+            return []
+    except Exception as e:
+        print(f"Error while fetching financial news: {e}")
+        return []
+
+
+
+@app.route('/portfolio')
+def portfolio_page():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    connection = create_connection()
+    if connection:
+        create_tables(connection)
+        portfolio_data = get_portfolio(connection)
+
+        total_value_of_stocks = sum(stock[1] * get_live_price(stock[0]) if get_live_price(stock[0]) is not None else 0 for stock in portfolio_data)
+        total_investment = sum(stock[1] * stock[2] for stock in portfolio_data)
+        total_gains = total_value_of_stocks - total_investment
+
+        updated_portfolio_data = []
+        for stock in portfolio_data:
+            symbol, quantity, avg_price = stock
+            live_price = get_live_price(symbol)
+            if live_price is not None:
+                stock_data = [symbol, quantity, avg_price, live_price]  
+            else:
+                stock_data = [symbol, quantity, avg_price, "Not available"]
+            updated_portfolio_data.append(stock_data)
+            
+        api_key = 'a85aaff62a0846f1860b12eae398880f'  
+        financial_news = get_financial_news(api_key)
+
+        return render_template(
+            'portfolio.html',
+            portfolio=updated_portfolio_data,
+            total_value_of_stocks=total_value_of_stocks,
+            total_investment=total_investment,
+            total_gains=total_gains,
+            financial_news=financial_news
+        )
+
+        return render_template('portfolio.html', portfolio=updated_portfolio_data,
+                               total_value_of_stocks=total_value_of_stocks, total_investment=total_investment,
+                               total_gains=total_gains)
+
+
+
+@app.route('/add_stock', methods=['POST'])
+
+def add_stock():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        symbol = request.form.get('symbol')
+        quantity = int(request.form.get('quantity'))
+        avg_price = float(request.form.get('avg_price'))
+        
+        connection = create_connection()
+        if connection:
+            add_to_portfolio(connection, symbol, quantity, avg_price)
+            flash(f"Added {quantity} shares of {symbol} at ${avg_price} each to the portfolio.", 'success')
+    
+    return redirect(url_for('portfolio_page'))
+
+def delete_stock_from_portfolio(connection, symbol_to_delete):
+    try:
+        cursor = connection.cursor()
+        cursor.execute('DELETE FROM portfolio WHERE symbol=%s', (symbol_to_delete,))
+        connection.commit()
+        print(f"Deleted {symbol_to_delete} from the portfolio.")
+    except Error as e:
+        print("Error while deleting stock from portfolio:", e)
+
+@app.route('/delete_stock', methods=['POST'])
+def delete_stock():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        symbol_to_delete = request.form.get('symbol')
+        connection = create_connection()
+        if connection:
+            delete_stock_from_portfolio(connection, symbol_to_delete)
+            flash(f"Deleted {symbol_to_delete} from the portfolio.", 'success')
+    
+    return redirect(url_for('portfolio_page'))
+
+
+
 
 
 if __name__ == '__main__':
