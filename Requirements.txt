@@ -1,7 +1,7 @@
-yfinance==0.1.63
-mysql-connector-python==8.0.27
-plotly==5.3.1
-Flask==2.0.1
-Flask-WTF==0.15.1
-WTForms==2.3.3
+yfinance==0.2.26
+mysql-connector
+plotly
+Flask
+Flask-WTF
+WTForms
 requests

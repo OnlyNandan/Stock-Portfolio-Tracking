@@ -30,6 +30,7 @@ def create_connection():
                 user='root',
                 password='123',
                 database='stockmanagement'
+                
             )
             if connection.is_connected():
                 print("Connected to 'stockmanagement' database")
@@ -297,4 +298,4 @@ if __name__ == '__main__':
         create_tables(connection)
         connection.close()
     
-    app.run(debug=True, port=6625)
+    app.run(debug=True, port=6767)
