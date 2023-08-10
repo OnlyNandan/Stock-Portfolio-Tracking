@@ -16,12 +16,24 @@ def create_connection():
         connection = mysql.connector.connect(
             host='localhost',
             user='root',
-            password='123',
-            database='StockManagement'
+            password='123'
         )
         if connection.is_connected():
             print("Connected to MySQL database")
-            return connection
+            create_db_query = "CREATE DATABASE IF NOT EXISTS stockmanagement"
+            cursor = connection.cursor()
+            cursor.execute(create_db_query)
+            cursor.close()
+
+            connection = mysql.connector.connect(
+                host='localhost',
+                user='root',
+                password='123',
+                database='stockmanagement'
+            )
+            if connection.is_connected():
+                print("Connected to 'stockmanagement' database")
+                return connection
 
     except Error as e:
         print("Error while connecting to MySQL database:", e)
@@ -44,12 +56,26 @@ def create_tables(connection):
                 symbol VARCHAR(10) PRIMARY KEY
             )
         ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(50) NOT NULL UNIQUE,
+                password VARCHAR(100) NOT NULL
+            )
+        ''')
+
+        cursor.execute('''
+            INSERT IGNORE INTO users (username, password)
+            VALUES ('Nandan', 'nandan7'),
+                   ('Sohana', 'sohana6'),
+                   ('Nayonika', 'nayonika3')
+        ''')
 
         connection.commit()
 
     except Error as e:
         print("Error while creating tables:", e)
-
 
 def add_to_portfolio(connection, symbol, quantity, avg_price):
     try:
@@ -146,7 +172,7 @@ def index():
             symbol, quantity, avg_price = stock
             live_price = get_live_price(symbol)
             if live_price is not None:
-                stock_data = [symbol, quantity, avg_price, live_price]  # Create a new list with live price
+                stock_data = [symbol, quantity, avg_price, live_price] 
             else:
                 stock_data = [symbol, quantity, avg_price, "Not available"]
             updated_portfolio_data.append(stock_data)
@@ -265,5 +291,10 @@ def delete_stock():
 
 
 if __name__ == '__main__':
+    connection = create_connection()
+    
+    if connection:
+        create_tables(connection)
+        connection.close()
+    
     app.run(debug=True, port=6625)
-
