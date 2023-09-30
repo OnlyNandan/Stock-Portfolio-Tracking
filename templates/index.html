@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stock Portfolio Tracker</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+        header {
+            background-color: #262626;
+            color: #fff;
+            text-align: center;
+            padding: 15px;
+            font-size: 32px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            margin: 10px;
+            font-size: 32px;
+        }
+        #container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        #graph-container {
+            flex: 2;
+            height: 550px;
+            background-color: #1a1a1a;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 1s ease-in-out;
+        }
+        #stock-list {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            animation: slideInUp 1s ease-in-out;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            color: #fff;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #262626;
+            color: #fff;
+        }
+        tr {
+            transition: background-color 0.2s ease-in-out;
+        }
+        tr:hover {
+            background-color: #3d3d3d;
+        }
+        .positive-profit {
+            color: #00cc66;
+        }
+        .negative-profit {
+            color: #ff3333;
+        }
+        .rounded-container {
+            border-radius: 10px;
+            padding: 10px;
+            background-color: #262626;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideInUp {
+            from {
+                transform: translateY(50px);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .sign-out-button {
+            background-color: #ff3333;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            float: right;
+        }
+
+        .sign-out-button:hover {
+            background-color: #ff6666;
+        }
+        .stock-info {
+            width: 150px;
+            height: 80px;
+            margin: 10px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            background-color: #262626;
+            position: relative;
+            padding-left: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .stock-info .left-content {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            flex: 2;
+            color: #fff;
+        }
+
+        .stock-info .left-content h4 {
+            margin: 5px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .stock-info .stock-indicator {
+            position: absolute;
+            top: 31%;
+            left: 10px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            transform: translateY(-50%);
+        }
+
+        .stock-info .stock-indicator.profit {
+            background-color: #00cc66;
+        }
+
+        .stock-info .stock-indicator.loss {
+            background-color: #ff3333;
+        }
+        .graph-container {
+            width: 150px;
+            height: 80px;
+            margin: 20px;
+            display: flex;
+            align-items: left;
+            justify-content: center;
+        }
+        #stock-info-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <button class="sign-out-button" onclick="window.location.href='/';">Sign Out</button>
+        <h1>Stock Portfolio Tracker</h1>
+    </header>
+    <div id="container">
+        <div id="graph-container"></div>
+		
+        <div id="stock-list" class="rounded-container">
+		
+            <h2 style="color: #fff;">My Stocks</h2>
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Quantity</th>
+                    <th>Profit/Loss</th>
+                </tr>
+                {% for stock in portfolio %}
+                <tr>
+                    <td>{{ stock[0] }}</td>
+                    <td>{{ stock[1] }}</td>
+                    <td class="{% if stock[3]|default(0) * stock[1]|int - stock[1]|int * stock[2]|float >= 0 %}positive-profit{% else %}negative-profit{% endif %}">
+                        ${{ (stock[3]|default(0) * stock[1]|int - stock[1]|int * stock[2]|float)|round(2) }}
+                    </td>
+                </tr>
+                {% endfor %}
+				
+            </table>
+        <div style="text-align: center; margin-top: 20px; width: 100%;">
+            <button style="background-color: #3399ff; color: #fff; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer;"
+                onclick="window.location.href='/portfolio';">
+                My Portfolio
+            </button>
+			</div>
+			
+			
+			
+        </div>
+		
+    </div>
+	
+    <div id="stock-info-container" style="display: flex; flex-wrap: wrap;">
+        {% for stock in portfolio %}
+        <div class="stock-info" style="background-color: {% if stock[3]|default(0) * stock[1]|int - stock[1]|int * stock[2]|float >= 0 %}#262626{% else %}#262626{% endif %};">
+            <div class="left-content">
+                <h4>{{ stock[0] }}</h4>
+                <h4 style="font-size: 16px;">Price: $ {{ stock[3]|default("N/A")|round(2) }}</h4>
+            </div>
+            <div class="stock-indicator {% if stock[3]|default(0) * stock[1]|int - stock[1]|int * stock[2]|float >= 0 %}profit{% else %}loss{% endif %}">
+                <svg width="12" height="12">
+                </svg>
+            </div>
+            <div class="stock-image {% if stock[3]|default(0) * stock[1]|int - stock[1]|int * stock[2]|float >= 0 %}profit{% else %}loss{% endif %}"></div>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        var data = [
+            {
+                x: [{% for stock in portfolio %}'{{ stock[0] }}',{% endfor %}],
+                y: [{% for stock in portfolio %}{{ stock[2]|round(2) }},{% endfor %}],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Avg. Buy Price',
+                line: { color: '#3399ff' }
+            },
+            {
+                x: [{% for stock in portfolio %}'{{ stock[0] }}',{% endfor %}],
+                y: [{% for stock in portfolio %}{{ stock[3]|default("null")|round(2) }},{% endfor %}],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Live Price',
+                line: { color: '#00cc66' }
+            },
+            {
+                x: [{% for stock in portfolio %}'{{ stock[0] }}',{% endfor %}],
+                y: [{% for stock in portfolio %}{{ (stock[1] * stock[2])|round(2) }},{% endfor %}],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Total Value',
+                line: { color: '#ffa64d' }
+            },
+            {
+                x: [{% for stock in portfolio %}'{{ stock[0] }}',{% endfor %}],
+                y: [{% for stock in portfolio %}{{ (stock[1] * stock[3]|default("null"))|round(2) }},{% endfor %}],
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Total Live Value',
+                line: { color: '#ff3333' }
+            }
+        ];
+
+        var layout = {
+            title: 'Stock Performance',
+            xaxis: { title: 'Stock Name', showgrid: false, tickfont: { color: '#ffffff' } },
+            yaxis: { title: 'Price', showgrid: false, tickfont: { color: '#ffffff' } },
+            showlegend: true,
+            legend: {
+                x: 1,
+                xanchor: 'right',
+                y: 1,
+                font: { color: '#ffffff' }
+            },
+            plot_bgcolor: '#1a1a1a',
+            paper_bgcolor: '#1a1a1a',
+        };
+
+        Plotly.newPlot('graph-container', data, layout);
+    </script>
+</body>
+</html>
