@@ -45,20 +45,6 @@ def create_tables(connection):
         cursor = connection.cursor()
 
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS portfolio (
-                symbol VARCHAR(10) PRIMARY KEY,
-                quantity INTEGER,
-                avg_price FLOAT
-            )
-        ''')
-
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS watchlist (
-                symbol VARCHAR(10) PRIMARY KEY
-            )
-        ''')
-        
-        cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(50) NOT NULL UNIQUE,
@@ -73,21 +59,40 @@ def create_tables(connection):
                    ('Nayonika', 'nayonika3')
         ''')
 
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS portfolio (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                symbol VARCHAR(10),
+                quantity INTEGER,
+                avg_price FLOAT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS watchlist (
+                symbol VARCHAR(10) PRIMARY KEY
+            )
+        ''')
+
         connection.commit()
 
     except Error as e:
         print("Error while creating tables:", e)
 
-def add_to_portfolio(connection, symbol, quantity, avg_price):
+
+def add_to_portfolio(connection, user_id, symbol, quantity, avg_price):
     try:
         cursor = connection.cursor()
-        cursor.execute('INSERT INTO portfolio (symbol, quantity, avg_price) VALUES (%s, %s, %s) '
+        cursor.execute('INSERT INTO portfolio (user_id, symbol, quantity, avg_price) VALUES (%s, %s, %s, %s) '
                        'ON DUPLICATE KEY UPDATE quantity=quantity+VALUES(quantity), avg_price=VALUES(avg_price)',
-                       (symbol, quantity, avg_price))
+                       (user_id, symbol, quantity, avg_price))
         connection.commit()
         print(f"Added {quantity} shares of {symbol} to the portfolio.")
     except Error as e:
         print("Error while adding to portfolio:", e)
+
 
 def add_to_watchlist(connection, symbol):
     try:
@@ -98,10 +103,10 @@ def add_to_watchlist(connection, symbol):
     except Error as e:
         print("Error while adding to watchlist:", e)
 
-def get_portfolio(connection):
+def get_portfolio(connection, user_id):
     try:
         cursor = connection.cursor()
-        cursor.execute('SELECT * FROM portfolio')
+        cursor.execute('SELECT * FROM portfolio WHERE user_id=%s', (user_id,))
         return cursor.fetchall()
     except Error as e:
         print("Error while fetching portfolio data:", e)
@@ -157,38 +162,58 @@ def check_user_credentials(username, password):
     except Error as e:
         print("Error while checking user credentials:", e)
     return False
-    
+def get_user_id(username):
+    try:
+        connection = create_connection()
+        if connection:
+            cursor = connection.cursor()
+            cursor.execute('SELECT id FROM users WHERE username=%s', (username,))
+            user = cursor.fetchone()
+            cursor.close()
+            if user:
+                return user[0]
+    except Error as e:
+        print("Error while getting user ID:", e)
+    return None
+
 @app.route('/index')
 def index():
     if 'username' not in session:
         return redirect(url_for('login'))
-    connection = create_connection()
-    if connection:
-        create_tables(connection)
-        portfolio_data = get_portfolio(connection)
-        watchlist_data = get_watchlist(connection)
+    username = session['username']
+    user_id = get_user_id(username)  # Get the user_id for the logged-in user
+    if user_id is not None:
+        connection = create_connection()
+        if connection:
+            create_tables(connection)
+            portfolio_data = get_portfolio(connection, user_id)  # Pass user_id as an argument here
+            watchlist_data = get_watchlist(connection)
 
-        updated_portfolio_data = []
-        for stock in portfolio_data:
-            symbol, quantity, avg_price = stock
-            live_price = get_live_price(symbol)
-            if live_price is not None:
-                stock_data = [symbol, quantity, avg_price, live_price] 
-            else:
-                stock_data = [symbol, quantity, avg_price, "Not available"]
-            updated_portfolio_data.append(stock_data)
+            updated_portfolio_data = []
+            for stock in portfolio_data:
+                ida,uida,symbol, quantity, avg_price = stock
+                live_price = get_live_price(symbol)
+                if live_price is not None:
+                    stock_data = [symbol, quantity, avg_price, live_price] 
+                else:
+                    stock_data = [symbol, quantity, avg_price, "Not available"]
+                updated_portfolio_data.append(stock_data)
 
-        updated_watchlist_data = []
-        for stock in watchlist_data:
-            symbol = stock[0]
-            live_price = get_live_price(symbol)
-            if live_price is not None:
-                stock_data = [symbol, live_price]  
-            else:
-                stock_data = [symbol, "Not available"]
-            updated_watchlist_data.append(stock_data)
+            updated_watchlist_data = []
+            for stock in watchlist_data:
+                symbol = stock[0]
+                live_price = get_live_price(symbol)
+                if live_price is not None:
+                    stock_data = [symbol, live_price]  
+                else:
+                    stock_data = [symbol, "Not available"]
+                updated_watchlist_data.append(stock_data)
 
-        return render_template('index.html', portfolio=updated_portfolio_data, watchlist=updated_watchlist_data)
+            return render_template('index.html', portfolio=updated_portfolio_data, watchlist=updated_watchlist_data)
+    
+    # Handle the case where user_id is not found or there's an issue with the connection
+    flash('Error fetching data. Please try again later.', 'danger')
+    return redirect(url_for('login'))
 
 def get_financial_news(api_key):
     try:
@@ -209,45 +234,51 @@ def get_financial_news(api_key):
 def portfolio_page():
     if 'username' not in session:
         return redirect(url_for('login'))
-    connection = create_connection()
-    if connection:
-        create_tables(connection)
-        portfolio_data = get_portfolio(connection)
+    
+    username = session['username']
+    user_id = get_user_id(username)  # Get the user_id for the logged-in user
+    if user_id is not None:
+        connection = create_connection()
+        if connection:
+            create_tables(connection)
+            portfolio_data = get_portfolio(connection, user_id)  # Pass user_id as an argument here
+            watchlist_data = get_watchlist(connection)
 
-        total_value_of_stocks = sum(stock[1] * get_live_price(stock[0]) if get_live_price(stock[0]) is not None else 0 for stock in portfolio_data)
-        total_investment = sum(stock[1] * stock[2] for stock in portfolio_data)
-        total_gains = total_value_of_stocks - total_investment
+            total_value_of_stocks = sum(stock[3] * get_live_price(stock[2]) if get_live_price(stock[2]) is not None else 0 for stock in portfolio_data)
+            total_investment = sum(stock[3] * stock[4] for stock in portfolio_data)
+            total_gains = total_value_of_stocks - total_investment
 
-        updated_portfolio_data = []
-        for stock in portfolio_data:
-            symbol, quantity, avg_price = stock
-            live_price = get_live_price(symbol)
-            if live_price is not None:
-                stock_data = [symbol, quantity, avg_price, live_price]  
-            else:
-                stock_data = [symbol, quantity, avg_price, "Not available"]
-            updated_portfolio_data.append(stock_data)
-            
-        api_key = 'a85aaff62a0846f1860b12eae398880f'  
-        financial_news = get_financial_news(api_key)
+            updated_portfolio_data = []
+            for stock in portfolio_data:
+                ida,uida,symbol, quantity, avg_price = stock
+                live_price = get_live_price(symbol)
+                if live_price is not None:
+                    stock_data = [symbol, quantity, avg_price, live_price]  
+                else:
+                    stock_data = [symbol, quantity, avg_price, "Not available"]
+                updated_portfolio_data.append(stock_data)
 
-        return render_template(
-            'portfolio.html',
-            portfolio=updated_portfolio_data,
-            total_value_of_stocks=total_value_of_stocks,
-            total_investment=total_investment,
-            total_gains=total_gains,
-            financial_news=financial_news
-        )
+            api_key = 'a85aaff62a0846f1860b12eae398880f'  
+            financial_news = get_financial_news(api_key)
 
-        return render_template('portfolio.html', portfolio=updated_portfolio_data,
+            return render_template(
+                'portfolio.html',
+                portfolio=updated_portfolio_data,
+                total_value_of_stocks=total_value_of_stocks,
+                total_investment=total_investment,
+                total_gains=total_gains,
+                financial_news=financial_news
+            )
+            return render_template('portfolio.html', portfolio=updated_portfolio_data,
                                total_value_of_stocks=total_value_of_stocks, total_investment=total_investment,
                                total_gains=total_gains)
+    
+    flash('Error fetching data. Please try again later.', 'danger')
+    return redirect(url_for('login'))
 
 
 
 @app.route('/add_stock', methods=['POST'])
-
 def add_stock():
     if 'username' not in session:
         return redirect(url_for('login'))
@@ -257,12 +288,17 @@ def add_stock():
         quantity = int(request.form.get('quantity'))
         avg_price = float(request.form.get('avg_price'))
         
-        connection = create_connection()
-        if connection:
-            add_to_portfolio(connection, symbol, quantity, avg_price)
-            flash(f"Added {quantity} shares of {symbol} at ${avg_price} each to the portfolio.", 'success')
+        username = session['username']
+        user_id = get_user_id(username)  # Get the user_id for the logged-in user
+        
+        if user_id is not None:
+            connection = create_connection()
+            if connection:
+                add_to_portfolio(connection, user_id, symbol, quantity, avg_price)  # Pass user_id as the first argument
+                flash(f"Added {quantity} shares of {symbol} at ${avg_price} each to the portfolio.", 'success')
     
     return redirect(url_for('portfolio_page'))
+
 
 def delete_stock_from_portfolio(connection, symbol_to_delete):
     try:
@@ -298,4 +334,4 @@ if __name__ == '__main__':
         create_tables(connection)
         connection.close()
     
-    app.run(debug=True, port=6767)
+    app.run(debug=True, port=4362)
