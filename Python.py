@@ -289,15 +289,28 @@ def add_stock():
         avg_price = float(request.form.get('avg_price'))
         
         username = session['username']
-        user_id = get_user_id(username)  # Get the user_id for the logged-in user
+        user_id = get_user_id(username)
         
-        if user_id is not None:
+        if is_valid_stock(symbol):
             connection = create_connection()
             if connection:
-                add_to_portfolio(connection, user_id, symbol, quantity, avg_price)  # Pass user_id as the first argument
-                flash(f"Added {quantity} shares of {symbol} at ${avg_price} each to the portfolio.", 'success')
+                symbol=symbol.upper()
+                add_to_portfolio(connection, user_id, symbol, quantity, avg_price)
+        else:
+            flash(f"Invalid stock symbol: {symbol}. Please enter a valid stock symbol.", 'danger')
     
     return redirect(url_for('portfolio_page'))
+def is_valid_stock(symbol):
+    try:
+        stock = yf.Ticker(symbol)
+        info = stock.info
+        if info.get('quoteType') in ('EQUITY', 'ETF'):
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"Error while validating stock symbol {symbol}: {e}")
+        return False
 
 
 def delete_stock_from_portfolio(connection, symbol_to_delete):
@@ -334,4 +347,4 @@ if __name__ == '__main__':
         create_tables(connection)
         connection.close()
     
-    app.run(debug=True, port=4362)
+    app.run(debug=True, port=1281)
