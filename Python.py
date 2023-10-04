@@ -66,8 +66,7 @@ def create_tables(connection):
                 symbol VARCHAR(10),
                 quantity INTEGER,
                 avg_price FLOAT,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )
+                FOREIGN KEY (user_id) REFERENCES users(id))
         ''')
 
         cursor.execute('''
@@ -82,14 +81,34 @@ def create_tables(connection):
         print("Error while creating tables:", e)
 
 
-def add_to_portfolio(connection, user_id, symbol, quantity, avg_price):
+def add_to_portfolio(connection, user_id, symbol, new_quantity, new_avg_price):
     try:
         cursor = connection.cursor()
-        cursor.execute('INSERT INTO portfolio (user_id, symbol, quantity, avg_price) VALUES (%s, %s, %s, %s) '
-                       'ON DUPLICATE KEY UPDATE quantity=quantity+VALUES(quantity), avg_price=VALUES(avg_price)',
-                       (user_id, symbol, quantity, avg_price))
+        cursor.execute('SELECT quantity, avg_price FROM portfolio WHERE user_id=%s AND symbol=%s', (user_id, symbol))
+        result = cursor.fetchone()
+
+        if result:
+            old_quantity, old_avg_price = result
+            total_old_cost = old_quantity * old_avg_price
+            total_new_cost = new_quantity * new_avg_price
+            total_cost = total_old_cost + total_new_cost
+            total_quantity = old_quantity + new_quantity
+            combined_avg_price = total_cost / total_quantity
+
+            cursor.execute('''
+                UPDATE portfolio 
+                SET quantity=%s, avg_price=%s 
+                WHERE user_id=%s AND symbol=%s
+            ''', (total_quantity, combined_avg_price, user_id, symbol))
+
+        else:
+            cursor.execute('''
+                INSERT INTO portfolio (user_id, symbol, quantity, avg_price)
+                VALUES (%s, %s, %s, %s)
+            ''', (user_id, symbol, new_quantity, new_avg_price))
+
         connection.commit()
-        print(f"Added {quantity} shares of {symbol} to the portfolio.")
+        print(f"Added {new_quantity} shares of {symbol} to the portfolio with avg price of {new_avg_price if not result else combined_avg_price}.")
     except Error as e:
         print("Error while adding to portfolio:", e)
 
@@ -181,12 +200,12 @@ def index():
     if 'username' not in session:
         return redirect(url_for('login'))
     username = session['username']
-    user_id = get_user_id(username)  # Get the user_id for the logged-in user
+    user_id = get_user_id(username) 
     if user_id is not None:
         connection = create_connection()
         if connection:
             create_tables(connection)
-            portfolio_data = get_portfolio(connection, user_id)  # Pass user_id as an argument here
+            portfolio_data = get_portfolio(connection, user_id) 
             watchlist_data = get_watchlist(connection)
 
             updated_portfolio_data = []
@@ -211,7 +230,6 @@ def index():
 
             return render_template('index.html', portfolio=updated_portfolio_data, watchlist=updated_watchlist_data)
     
-    # Handle the case where user_id is not found or there's an issue with the connection
     flash('Error fetching data. Please try again later.', 'danger')
     return redirect(url_for('login'))
 
@@ -236,12 +254,12 @@ def portfolio_page():
         return redirect(url_for('login'))
     
     username = session['username']
-    user_id = get_user_id(username)  # Get the user_id for the logged-in user
+    user_id = get_user_id(username) 
     if user_id is not None:
         connection = create_connection()
         if connection:
             create_tables(connection)
-            portfolio_data = get_portfolio(connection, user_id)  # Pass user_id as an argument here
+            portfolio_data = get_portfolio(connection, user_id) 
             watchlist_data = get_watchlist(connection)
 
             total_value_of_stocks = sum(stock[3] * get_live_price(stock[2]) if get_live_price(stock[2]) is not None else 0 for stock in portfolio_data)
