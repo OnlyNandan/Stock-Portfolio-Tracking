@@ -11,6 +11,7 @@ from wtforms.validators import DataRequired
 app = Flask(__name__)
 app.secret_key = "S@^a6"
 
+
 def create_connection():
     try:
         connection = mysql.connector.connect(
@@ -71,8 +72,10 @@ def create_tables(connection):
 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS watchlist (
-                symbol VARCHAR(10) PRIMARY KEY
-            )
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                symbol VARCHAR(10),
+                FOREIGN KEY (user_id) REFERENCES users(id))
         ''')
 
         connection.commit()
@@ -112,16 +115,6 @@ def add_to_portfolio(connection, user_id, symbol, new_quantity, new_avg_price):
     except Error as e:
         print("Error while adding to portfolio:", e)
 
-
-def add_to_watchlist(connection, symbol):
-    try:
-        cursor = connection.cursor()
-        cursor.execute('INSERT IGNORE INTO watchlist (symbol) VALUES (%s)', (symbol,))
-        connection.commit()
-        print(f"Added {symbol} to the watchlist.")
-    except Error as e:
-        print("Error while adding to watchlist:", e)
-
 def get_portfolio(connection, user_id):
     try:
         cursor = connection.cursor()
@@ -129,15 +122,6 @@ def get_portfolio(connection, user_id):
         return cursor.fetchall()
     except Error as e:
         print("Error while fetching portfolio data:", e)
-        return []
-
-def get_watchlist(connection):
-    try:
-        cursor = connection.cursor()
-        cursor.execute('SELECT * FROM watchlist')
-        return cursor.fetchall()
-    except Error as e:
-        print("Error while fetching watchlist data:", e)
         return []
 
 def get_live_price(symbol):
@@ -206,7 +190,6 @@ def index():
         if connection:
             create_tables(connection)
             portfolio_data = get_portfolio(connection, user_id) 
-            watchlist_data = get_watchlist(connection)
 
             updated_portfolio_data = []
             for stock in portfolio_data:
@@ -218,17 +201,7 @@ def index():
                     stock_data = [symbol, quantity, avg_price, "Not available"]
                 updated_portfolio_data.append(stock_data)
 
-            updated_watchlist_data = []
-            for stock in watchlist_data:
-                symbol = stock[0]
-                live_price = get_live_price(symbol)
-                if live_price is not None:
-                    stock_data = [symbol, live_price]  
-                else:
-                    stock_data = [symbol, "Not available"]
-                updated_watchlist_data.append(stock_data)
-
-            return render_template('index.html', portfolio=updated_portfolio_data, watchlist=updated_watchlist_data)
+            return render_template('index.html', portfolio=updated_portfolio_data)
     
     flash('Error fetching data. Please try again later.', 'danger')
     return redirect(url_for('login'))
@@ -260,7 +233,6 @@ def portfolio_page():
         if connection:
             create_tables(connection)
             portfolio_data = get_portfolio(connection, user_id) 
-            watchlist_data = get_watchlist(connection)
 
             total_value_of_stocks = sum(stock[3] * get_live_price(stock[2]) if get_live_price(stock[2]) is not None else 0 for stock in portfolio_data)
             total_investment = sum(stock[3] * stock[4] for stock in portfolio_data)
@@ -353,10 +325,6 @@ def delete_stock():
             flash(f"Deleted {symbol_to_delete} from the portfolio.", 'success')
     
     return redirect(url_for('portfolio_page'))
-
-
-
-
 
 if __name__ == '__main__':
     connection = create_connection()
