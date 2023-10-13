@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Watchlist</title>
+    <style>
+        /* Add your custom CSS styles here */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        header {
+            background-color: #262626;
+            color: #fff;
+            text-align: center;
+            padding: 2px;
+            font-size: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            color: #fff;
+        }
+
+        th,
+        td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #262626;
+            color: #fff;
+        }
+
+        tr {
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        tr:hover {
+            background-color: #3d3d3d;
+        }
+
+        .rounded-container {
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #262626;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0px;
+            margin-left: 25px;
+            margin-right: 25px;
+        }
+
+        .home-button,
+        .add-button {
+            background-color: #3399ff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .home-button:hover,
+        .add-button:hover {
+            background-color: #1f7bbf;
+        }
+
+        .delete-button {
+            background-color: #ff4d4d;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .delete-button:hover {
+            background-color: #ff1a1a;
+        }
+
+        .buy-button {
+            background-color: #00cc66;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .buy-button:hover {
+            background-color: #00b359;
+        }
+
+        .add-stocks-form {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .add-stocks-form input {
+            margin: 5px 10px 5px 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            flex-grow: 1;
+            width: 150px; /* Adjust the width as needed */
+        }
+
+        .add-stocks-form button {
+            margin: 5px 10px 5px 20px;
+            background-color: #00cc66;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .add-stocks-form button:hover {
+            background-color: #00b359;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="button-container">
+            <button class="home-button" onclick="window.location.href='/index';">
+                Home Page
+            </button>
+            <h1>My Watchlist</h1>
+            <button class="add-button" onclick="window.location.href='/portfolio';">
+                Portfolio
+            </button>
+        </div>
+    </header>
+    <main>
+        <section id="watchlist" class="rounded-container">
+            <h2>Watchlist</h2>
+            <table>
+                <tr>
+                    <th>Stock Name</th>
+                    <th>Live Price</th>
+                    <th>Quantity</th>
+                    <th>Buy</th>
+                    <th>Action</th>
+                </tr>
+                {% for stock in watchlist %}
+                <tr>
+                    <td>{{ stock[0] }}</td>
+                    <td>{% if stock[1] != "Not available" %}${{ stock[1]|round(2) }}{% else %}{{ stock[1] }}{% endif %}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('buy_stock') }}">
+                            <input type="hidden" name="symbol" value="{{ stock[0] }}">
+                            <input type="number" name="quantity" min="1" placeholder="Qty" required>
+                    </td>
+                    <td>
+                            <button type="submit" class="buy-button">Buy</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="post" action="{{ url_for('delete_from_watchlist') }}">
+                            <input type="hidden" name="symbol" value="{{ stock[0] }}">
+                            <button class="delete-button" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+
+        </section>
+
+        <div class="add-stocks-form rounded-container">
+            <h2>Add Stocks to Watchlist</h2>
+            <form method="post" action="{{ url_for('add_to_watchlist') }}">
+                <input type="text" name="symbol" placeholder="Enter Stock Symbol" required>
+                <button type="submit">Add to Watchlist</button>
+            </form>
+        </div>
+    </main>
+</body>
+
+</html>
+

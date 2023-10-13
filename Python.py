@@ -11,7 +11,6 @@ from wtforms.validators import DataRequired
 app = Flask(__name__)
 app.secret_key = "S@^a6"
 
-
 def create_connection():
     try:
         connection = mysql.connector.connect(
@@ -114,6 +113,8 @@ def add_to_portfolio(connection, user_id, symbol, new_quantity, new_avg_price):
         print(f"Added {new_quantity} shares of {symbol} to the portfolio with avg price of {new_avg_price if not result else combined_avg_price}.")
     except Error as e:
         print("Error while adding to portfolio:", e)
+
+
 
 def get_portfolio(connection, user_id):
     try:
@@ -325,6 +326,144 @@ def delete_stock():
             flash(f"Deleted {symbol_to_delete} from the portfolio.", 'success')
     
     return redirect(url_for('portfolio_page'))
+
+@app.route('/watchlist')
+def watchlist():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    username = session['username']
+    user_id = get_user_id(username)
+
+    if user_id is not None:
+        connection = create_connection()
+        if connection:
+            create_tables(connection)
+            watchlist_data = get_watchlist(connection, user_id)
+            return render_template('watchlist.html', watchlist=watchlist_data)
+
+    flash('Error fetching data. Please try again later.', 'danger')
+    return redirect(url_for('login'))
+
+def add_stock_to_watchlist(connection, user_id, symbol):
+    try:
+        cursor = connection.cursor()
+        cursor.execute('INSERT INTO watchlist (user_id, symbol) VALUES (%s, %s)', (user_id, symbol,))
+        connection.commit()
+        print(f"Added {symbol} to the watchlist for user ID {user_id}.")
+    except Error as e:
+        print("Error while adding stock to watchlist:", e)
+
+@app.route('/add_to_watchlist', methods=['POST'])
+def add_to_watchlist():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        symbol_to_add = request.form.get('symbol')
+        username = session['username']
+        user_id = get_user_id(username)
+
+        if user_id is not None:
+            connection = create_connection()
+
+            if connection:
+                symbol_to_add = symbol_to_add.upper()
+                add_stock_to_watchlist(connection, user_id, symbol_to_add)
+                flash(f"Added {symbol_to_add} to the watchlist.", 'success')
+            else:
+                flash("Failed to connect to the database.", 'danger')
+        else:
+            flash("Failed to get user ID.", 'danger')
+
+    return redirect(url_for('watchlist'))
+
+def delete_stock_from_watchlist(connection, user_id, symbol_to_delete):
+    try:
+        cursor = connection.cursor()
+        cursor.execute('DELETE FROM watchlist WHERE symbol=%s AND user_id=%s', (symbol_to_delete, user_id))
+        connection.commit()
+        print(f"Deleted {symbol_to_delete} from the watchlist.")
+    except Error as e:
+        print("Error while deleting stock from watchlist:", e)
+
+@app.route('/delete_from_watchlist', methods=['POST'])
+def delete_from_watchlist():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        symbol_to_delete = request.form.get('symbol')
+        username = session['username']
+        user_id = get_user_id(username)
+
+        if user_id is not None:
+            connection = create_connection()
+
+            if connection:
+                symbol_to_delete = symbol_to_delete.upper()
+                delete_stock_from_watchlist(connection, user_id, symbol_to_delete)
+                flash(f"Deleted {symbol_to_delete} from your watchlist.", 'success')
+            else:
+                flash("Failed to connect to the database.", 'danger')
+        else:
+            flash("Failed to get user ID.", 'danger')
+
+    return redirect(url_for('watchlist'))
+
+
+
+@app.route('/buy_stock', methods=['POST'])
+def buy_stock():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        symbol = request.form.get('symbol')
+        quantity = int(request.form.get('quantity'))
+
+        username = session['username']
+        user_id = get_user_id(username)
+
+        if is_valid_stock(symbol):
+            connection = create_connection()
+            if connection:
+                symbol = symbol.upper()
+                live_price = get_live_price(symbol)
+
+                if live_price is not None:
+                    avg_price = live_price  
+                    add_to_portfolio(connection, user_id, symbol, quantity, avg_price)
+                    delete_stock_from_watchlist(connection, user_id, symbol)
+                    flash(f"Bought {quantity} shares of {symbol} to the portfolio.", 'success')
+                else:
+                    flash(f"Failed to buy {symbol}. Live price not available.", 'danger')
+            else:
+                flash("Failed to connect to the database.", 'danger')
+        else:
+            flash(f"Invalid stock symbol: {symbol}. Please enter a valid stock symbol.", 'danger')
+
+    return redirect(url_for('watchlist'))
+
+def get_watchlist(connection, user_id):
+    try:
+        cursor = connection.cursor()
+        cursor.execute('SELECT symbol FROM watchlist WHERE user_id=%s', (user_id,))
+        watchlist_symbols = [row[0] for row in cursor.fetchall()]
+
+        watchlist_data = []
+        for symbol in watchlist_symbols:
+            live_price = get_live_price(symbol)
+            if live_price is not None:
+                watchlist_data.append((symbol, live_price))
+            else:
+                watchlist_data.append((symbol, "Not available"))
+
+        return watchlist_data
+
+    except Error as e:
+        print("Error while fetching watchlist data:", e)
+        return []
 
 if __name__ == '__main__':
     connection = create_connection()
